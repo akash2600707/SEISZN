@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   const [etaLoading, setEtaLoading] = useState(false)
   const [etaError, setEtaError] = useState('')
   const [estimate, setEstimate] = useState<ShippingEstimate | null>(null)
+  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('COD')
 
   const shipping = total >= 999 ? 0 : 99
   const grandTotal = total + shipping
@@ -66,6 +67,10 @@ export default function CheckoutPage() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || 'Unable to fetch delivery estimate')
         setEstimate(data)
+        setPaymentMethod((prev) => {
+          if (data?.cod_available) return prev
+          return 'ONLINE'
+        })
       } catch (err: any) {
         setEstimate(null)
         setEtaError(err?.message || 'Unable to fetch delivery estimate')
@@ -86,6 +91,87 @@ export default function CheckoutPage() {
     document.body.appendChild(s)
   })
 
+  const placeCodOrder = async () => {
+    const res = await fetch('/api/orders/cod', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: grandTotal,
+        items,
+        customer: { name: form.name, email: form.email, phone: form.phone },
+        shipping_address: {
+          line1: form.line1, line2: form.line2,
+          city: form.city, state: form.state,
+          pincode: form.pincode, country: 'India'
+        } as ShippingAddress,
+        shipping_estimate: estimate,
+        payment_method: 'COD',
+        payment_status: 'PENDING',
+      })
+    })
+
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error || 'Failed to create COD order')
+
+    clear()
+    router.push(`/orders/${data.db_order_id}?success=1`)
+  }
+
+  const payWithRazorpay = async () => {
+    const loaded = await loadRazorpay()
+    if (!loaded) throw new Error('Payment gateway failed to load')
+
+    const res = await fetch('/api/razorpay/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        amount: grandTotal,
+        items,
+        customer: { name: form.name, email: form.email, phone: form.phone },
+        shipping_address: {
+          line1: form.line1, line2: form.line2,
+          city: form.city, state: form.state,
+          pincode: form.pincode, country: 'India'
+        } as ShippingAddress
+      })
+    })
+
+    const { order_id, db_order_id } = await res.json()
+
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: grandTotal * 100,
+      currency: 'INR',
+      name: 'Seiszn',
+      description: 'Order Payment',
+      order_id,
+      prefill: { name: form.name, email: form.email, contact: form.phone },
+      theme: { color: '#e8ff47' },
+      handler: async (response: any) => {
+        const verify = await fetch('/api/razorpay/verify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            db_order_id
+          })
+        })
+        const result = await verify.json()
+        if (result.success) {
+          clear()
+          router.push(`/orders/${db_order_id}?success=1`)
+        } else {
+          setError('Payment verification failed. Contact support.')
+        }
+      },
+      modal: { ondismiss: () => setLoading(false) }
+    }
+
+    new window.Razorpay(options).open()
+  }
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
     if (items.length === 0) return
@@ -93,58 +179,12 @@ export default function CheckoutPage() {
     setError('')
 
     try {
-      const loaded = await loadRazorpay()
-      if (!loaded) throw new Error('Payment gateway failed to load')
-
-      const res = await fetch('/api/razorpay/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: grandTotal,
-          items,
-          customer: { name: form.name, email: form.email, phone: form.phone },
-          shipping_address: {
-            line1: form.line1, line2: form.line2,
-            city: form.city, state: form.state,
-            pincode: form.pincode, country: 'India'
-          } as ShippingAddress
-        })
-      })
-
-      const { order_id, db_order_id } = await res.json()
-
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: grandTotal * 100,
-        currency: 'INR',
-        name: 'Seiszn',
-        description: 'Order Payment',
-        order_id,
-        prefill: { name: form.name, email: form.email, contact: form.phone },
-        theme: { color: '#e8ff47' },
-        handler: async (response: any) => {
-          const verify = await fetch('/api/razorpay/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              db_order_id
-            })
-          })
-          const result = await verify.json()
-          if (result.success) {
-            clear()
-            router.push(`/orders/${db_order_id}?success=1`)
-          } else {
-            setError('Payment verification failed. Contact support.')
-          }
-        },
-        modal: { ondismiss: () => setLoading(false) }
+      if (paymentMethod === 'COD') {
+        await placeCodOrder()
+        return
       }
 
-      new window.Razorpay(options).open()
+      await payWithRazorpay()
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
       setLoading(false)
@@ -159,6 +199,8 @@ export default function CheckoutPage() {
       </div>
     )
   }
+
+  const codAllowed = estimate ? estimate.cod_available : true
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
@@ -243,6 +285,32 @@ export default function CheckoutPage() {
             )}
           </div>
 
+          <div className="card p-4 mt-4 space-y-3 text-sm">
+            <p className="font-semibold">Payment Method</p>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="paymentMethod"
+                checked={paymentMethod === 'COD'}
+                onChange={() => setPaymentMethod('COD')}
+                disabled={!codAllowed}
+              />
+              <span>Cash on Delivery</span>
+            </label>
+            {!codAllowed && (
+              <p className="text-red-400 text-xs">Cash on Delivery is not available for this PIN code.</p>
+            )}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                name="paymentMethod"
+                checked={paymentMethod === 'ONLINE'}
+                onChange={() => setPaymentMethod('ONLINE')}
+              />
+              <span>Razorpay (UPI / Card / Net Banking)</span>
+            </label>
+          </div>
+
           {error && (
             <p className="text-red-400 text-sm mt-3 p-3 bg-red-400/10 rounded-lg">{error}</p>
           )}
@@ -252,7 +320,7 @@ export default function CheckoutPage() {
             disabled={loading || (estimate !== null && !estimate.serviceable)}
             className="btn-primary w-full py-4 rounded-xl mt-4 font-bold text-sm uppercase tracking-wider disabled:opacity-50"
           >
-            {loading ? 'Processing...' : `Pay ₹${grandTotal.toLocaleString()} via Razorpay`}
+            {loading ? 'Processing...' : paymentMethod === 'COD' ? 'Place COD Order' : `Pay ₹${grandTotal.toLocaleString()} via Razorpay`}
           </button>
           <p className="text-white/30 text-xs text-center mt-3">
             🔒 Secured by Razorpay · UPI, Cards, Net Banking accepted
