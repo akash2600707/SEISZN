@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCart } from '@/lib/cart'
 import { useRouter } from 'next/navigation'
 import { ShippingAddress } from '@/lib/supabase'
@@ -19,11 +19,24 @@ const INDIAN_STATES = [
   'Chandigarh','Puducherry'
 ]
 
+type ShippingEstimate = {
+  serviceable: boolean
+  cod_available: boolean
+  delivery_days: number | null
+  estimated_delivery_date: string | null
+  courier_name: string | null
+  shipping_charge: number | null
+  error?: string
+}
+
 export default function CheckoutPage() {
   const { items, total, clear } = useCart()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [etaLoading, setEtaLoading] = useState(false)
+  const [etaError, setEtaError] = useState('')
+  const [estimate, setEstimate] = useState<ShippingEstimate | null>(null)
 
   const shipping = total >= 999 ? 0 : 99
   const grandTotal = total + shipping
@@ -36,6 +49,33 @@ export default function CheckoutPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
+
+  useEffect(() => {
+    const pin = form.pincode.trim()
+    if (!/^[0-9]{6}$/.test(pin)) {
+      setEstimate(null)
+      setEtaError('')
+      return
+    }
+
+    const t = window.setTimeout(async () => {
+      setEtaLoading(true)
+      setEtaError('')
+      try {
+        const res = await fetch(`/api/shipping/estimate?pincode=${encodeURIComponent(pin)}`)
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Unable to fetch delivery estimate')
+        setEstimate(data)
+      } catch (err: any) {
+        setEstimate(null)
+        setEtaError(err?.message || 'Unable to fetch delivery estimate')
+      } finally {
+        setEtaLoading(false)
+      }
+    }, 450)
+
+    return () => window.clearTimeout(t)
+  }, [form.pincode])
 
   const loadRazorpay = () => new Promise<boolean>((resolve) => {
     if (window.Razorpay) return resolve(true)
@@ -56,7 +96,6 @@ export default function CheckoutPage() {
       const loaded = await loadRazorpay()
       if (!loaded) throw new Error('Payment gateway failed to load')
 
-      // Create Razorpay order
       const res = await fetch('/api/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -84,7 +123,6 @@ export default function CheckoutPage() {
         prefill: { name: form.name, email: form.email, contact: form.phone },
         theme: { color: '#e8ff47' },
         handler: async (response: any) => {
-          // Verify payment
           const verify = await fetch('/api/razorpay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -127,7 +165,6 @@ export default function CheckoutPage() {
       <h1 className="text-3xl font-black mb-10">Checkout</h1>
 
       <form onSubmit={handleCheckout} className="grid md:grid-cols-2 gap-8">
-        {/* Form */}
         <div className="space-y-4">
           <h2 className="font-bold text-lg mb-2">Delivery Details</h2>
 
@@ -169,7 +206,6 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Order Summary */}
         <div>
           <h2 className="font-bold text-lg mb-4">Order Summary</h2>
           <div className="card p-4 space-y-3">
@@ -191,13 +227,29 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          <div className="card p-4 mt-4 space-y-2 text-sm">
+            <p className="font-semibold">Shiprocket delivery estimate</p>
+            {etaLoading && <p className="text-white/50">Checking serviceability...</p>}
+            {etaError && <p className="text-red-400">{etaError}</p>}
+            {estimate && estimate.serviceable && (
+              <>
+                <p className="text-white/70">✓ Delivery by: <span className="text-white">{estimate.estimated_delivery_date || 'Soon'}</span></p>
+                <p className="text-white/70">Courier: <span className="text-white">{estimate.courier_name || 'Shiprocket'}</span></p>
+                <p className="text-white/70">{estimate.cod_available ? 'Cash on Delivery available' : 'Cash on Delivery not available'}</p>
+              </>
+            )}
+            {estimate && !estimate.serviceable && (
+              <p className="text-red-400">This PIN code is not serviceable.</p>
+            )}
+          </div>
+
           {error && (
             <p className="text-red-400 text-sm mt-3 p-3 bg-red-400/10 rounded-lg">{error}</p>
           )}
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || (estimate !== null && !estimate.serviceable)}
             className="btn-primary w-full py-4 rounded-xl mt-4 font-bold text-sm uppercase tracking-wider disabled:opacity-50"
           >
             {loading ? 'Processing...' : `Pay ₹${grandTotal.toLocaleString()} via Razorpay`}
