@@ -6,6 +6,14 @@ import { useRouter } from 'next/navigation'
 import { ShippingAddress } from '@/lib/supabase'
 import Link from 'next/link'
 
+type Serviceability = {
+  checking: boolean
+  serviceable: boolean | null
+  cod_available: boolean
+  courier_name: string | null
+  etd: string | null
+}
+
 declare global {
   interface Window { Razorpay: any }
 }
@@ -19,25 +27,11 @@ const INDIAN_STATES = [
   'Chandigarh','Puducherry'
 ]
 
-type ShippingEstimate = {
-  serviceable: boolean
-  cod_available: boolean
-  delivery_days: number | null
-  estimated_delivery_date: string | null
-  courier_name: string | null
-  shipping_charge: number | null
-  error?: string
-}
-
 export default function CheckoutPage() {
   const { items, total, clear } = useCart()
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [etaLoading, setEtaLoading] = useState(false)
-  const [etaError, setEtaError] = useState('')
-  const [estimate, setEstimate] = useState<ShippingEstimate | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<'COD' | 'ONLINE'>('COD')
 
   const shipping = total >= 999 ? 0 : 99
   const grandTotal = total + shipping
@@ -47,40 +41,55 @@ export default function CheckoutPage() {
     line1: '', line2: '', city: '', state: 'Tamil Nadu', pincode: ''
   })
 
+  const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'COD'>('ONLINE')
+  const [serviceability, setServiceability] = useState<Serviceability>({
+    checking: false, serviceable: null, cod_available: false, courier_name: null, etd: null
+  })
+
+  const totalWeightKg = items.reduce((sum, i) => sum + ((i.product.weight || 500) * i.quantity), 0) / 1000
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
 
+  // Debounced serviceability + COD availability check whenever a full pincode is entered
   useEffect(() => {
-    const pin = form.pincode.trim()
-    if (!/^[0-9]{6}$/.test(pin)) {
-      setEstimate(null)
-      setEtaError('')
+    if (!/^[0-9]{6}$/.test(form.pincode)) {
+      setServiceability({ checking: false, serviceable: null, cod_available: false, courier_name: null, etd: null })
       return
     }
 
-    const t = window.setTimeout(async () => {
-      setEtaLoading(true)
-      setEtaError('')
-      try {
-        const res = await fetch(`/api/shipping/estimate?pincode=${encodeURIComponent(pin)}`)
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error || 'Unable to fetch delivery estimate')
-        setEstimate(data)
-        setPaymentMethod((prev) => {
-          if (data?.cod_available) return prev
-          return 'ONLINE'
-        })
-      } catch (err: any) {
-        setEstimate(null)
-        setEtaError(err?.message || 'Unable to fetch delivery estimate')
-      } finally {
-        setEtaLoading(false)
-      }
-    }, 450)
+    let cancelled = false
+    setServiceability(s => ({ ...s, checking: true }))
 
-    return () => window.clearTimeout(t)
-  }, [form.pincode])
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/shiprocket/serviceability', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pincode: form.pincode, weight: totalWeightKg })
+        })
+        const data = await res.json()
+        if (cancelled) return
+        setServiceability({
+          checking: false,
+          serviceable: !!data.serviceable,
+          cod_available: !!data.cod_available,
+          courier_name: data.courier_name || null,
+          etd: data.etd || null
+        })
+        if (!data.cod_available) {
+          setPaymentMethod(m => (m === 'COD' ? 'ONLINE' : m))
+        }
+      } catch {
+        if (cancelled) return
+        setServiceability({ checking: false, serviceable: true, cod_available: false, courier_name: null, etd: null })
+        setPaymentMethod(m => (m === 'COD' ? 'ONLINE' : m))
+      }
+    }, 500)
+
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [form.pincode, totalWeightKg])
 
   const loadRazorpay = () => new Promise<boolean>((resolve) => {
     if (window.Razorpay) return resolve(true)
@@ -91,100 +100,92 @@ export default function CheckoutPage() {
     document.body.appendChild(s)
   })
 
-  const placeCodOrder = async () => {
-    const res = await fetch('/api/orders/cod', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: grandTotal,
-        items,
-        customer: { name: form.name, email: form.email, phone: form.phone },
-        shipping_address: {
-          line1: form.line1, line2: form.line2,
-          city: form.city, state: form.state,
-          pincode: form.pincode, country: 'India'
-        } as ShippingAddress,
-        shipping_estimate: estimate,
-        payment_method: 'COD',
-        payment_status: 'PENDING',
-      })
-    })
-
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error || 'Failed to create COD order')
-
-    clear()
-    router.push(`/orders/${data.db_order_id}?success=1`)
-  }
-
-  const payWithRazorpay = async () => {
-    const loaded = await loadRazorpay()
-    if (!loaded) throw new Error('Payment gateway failed to load')
-
-    const res = await fetch('/api/razorpay/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        amount: grandTotal,
-        items,
-        customer: { name: form.name, email: form.email, phone: form.phone },
-        shipping_address: {
-          line1: form.line1, line2: form.line2,
-          city: form.city, state: form.state,
-          pincode: form.pincode, country: 'India'
-        } as ShippingAddress
-      })
-    })
-
-    const { order_id, db_order_id } = await res.json()
-
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: grandTotal * 100,
-      currency: 'INR',
-      name: 'Seiszn',
-      description: 'Order Payment',
-      order_id,
-      prefill: { name: form.name, email: form.email, contact: form.phone },
-      theme: { color: '#e8ff47' },
-      handler: async (response: any) => {
-        const verify = await fetch('/api/razorpay/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            razorpay_order_id: response.razorpay_order_id,
-            razorpay_payment_id: response.razorpay_payment_id,
-            razorpay_signature: response.razorpay_signature,
-            db_order_id
-          })
-        })
-        const result = await verify.json()
-        if (result.success) {
-          clear()
-          router.push(`/orders/${db_order_id}?success=1`)
-        } else {
-          setError('Payment verification failed. Contact support.')
-        }
-      },
-      modal: { ondismiss: () => setLoading(false) }
-    }
-
-    new window.Razorpay(options).open()
-  }
-
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault()
     if (items.length === 0) return
     setLoading(true)
     setError('')
 
+    const shipping_address = {
+      line1: form.line1, line2: form.line2,
+      city: form.city, state: form.state,
+      pincode: form.pincode, country: 'India'
+    } as ShippingAddress
+
+    if (paymentMethod === 'COD') {
+      try {
+        const res = await fetch('/api/orders/cod', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: total,
+            items,
+            customer: { name: form.name, email: form.email, phone: form.phone },
+            shipping_address
+          })
+        })
+        const result = await res.json()
+        if (!result.success) throw new Error(result.error || 'Could not place order')
+        clear()
+        router.push(`/orders/${result.db_order_id}?success=1`)
+      } catch (err: any) {
+        setError(err.message || 'Something went wrong')
+        setLoading(false)
+      }
+      return
+    }
+
     try {
-      if (paymentMethod === 'COD') {
-        await placeCodOrder()
-        return
+      const loaded = await loadRazorpay()
+      if (!loaded) throw new Error('Payment gateway failed to load')
+
+      // Create Razorpay order
+      const res = await fetch('/api/razorpay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: grandTotal,
+          items,
+          customer: { name: form.name, email: form.email, phone: form.phone },
+          shipping_address
+        })
+      })
+
+      const { order_id, db_order_id } = await res.json()
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: grandTotal * 100,
+        currency: 'INR',
+        name: 'Seiszn',
+        description: 'Order Payment',
+        order_id,
+        prefill: { name: form.name, email: form.email, contact: form.phone },
+        theme: { color: '#e8ff47' },
+        handler: async (response: any) => {
+          // Verify payment
+          const verify = await fetch('/api/razorpay/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              db_order_id
+            })
+          })
+          const result = await verify.json()
+          if (result.success) {
+            clear()
+            router.push(`/orders/${db_order_id}?success=1`)
+          } else {
+            setError('Payment verification failed. Contact support.')
+          }
+        },
+        modal: { ondismiss: () => setLoading(false) }
       }
 
-      await payWithRazorpay()
+      new window.Razorpay(options).open()
     } catch (err: any) {
       setError(err.message || 'Something went wrong')
       setLoading(false)
@@ -200,13 +201,12 @@ export default function CheckoutPage() {
     )
   }
 
-  const codAllowed = estimate ? estimate.cod_available : true
-
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-black mb-10">Checkout</h1>
 
       <form onSubmit={handleCheckout} className="grid md:grid-cols-2 gap-8">
+        {/* Form */}
         <div className="space-y-4">
           <h2 className="font-bold text-lg mb-2">Delivery Details</h2>
 
@@ -248,6 +248,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
+        {/* Order Summary */}
         <div>
           <h2 className="font-bold text-lg mb-4">Order Summary</h2>
           <div className="card p-4 space-y-3">
@@ -269,46 +270,49 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div className="card p-4 mt-4 space-y-2 text-sm">
-            <p className="font-semibold">Shiprocket delivery estimate</p>
-            {etaLoading && <p className="text-white/50">Checking serviceability...</p>}
-            {etaError && <p className="text-red-400">{etaError}</p>}
-            {estimate && estimate.serviceable && (
-              <>
-                <p className="text-white/70">✓ Delivery by: <span className="text-white">{estimate.estimated_delivery_date || 'Soon'}</span></p>
-                <p className="text-white/70">Courier: <span className="text-white">{estimate.courier_name || 'Shiprocket'}</span></p>
-                <p className="text-white/70">{estimate.cod_available ? 'Cash on Delivery available' : 'Cash on Delivery not available'}</p>
-              </>
-            )}
-            {estimate && !estimate.serviceable && (
-              <p className="text-red-400">This PIN code is not serviceable.</p>
-            )}
-          </div>
+          <div className="card p-4 mt-4">
+            <h2 className="font-bold text-sm mb-3">Payment Method</h2>
+            <div className="space-y-2">
+              <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors
+                ${paymentMethod === 'ONLINE' ? 'border-[#e8ff47] bg-[#e8ff47]/5' : 'border-white/10'}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="ONLINE"
+                  checked={paymentMethod === 'ONLINE'}
+                  onChange={() => setPaymentMethod('ONLINE')}
+                />
+                <span className="text-sm">Razorpay <span className="text-white/40">(UPI, Cards, Net Banking)</span></span>
+              </label>
 
-          <div className="card p-4 mt-4 space-y-3 text-sm">
-            <p className="font-semibold">Payment Method</p>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="paymentMethod"
-                checked={paymentMethod === 'COD'}
-                onChange={() => setPaymentMethod('COD')}
-                disabled={!codAllowed}
-              />
-              <span>Cash on Delivery</span>
-            </label>
-            {!codAllowed && (
-              <p className="text-red-400 text-xs">Cash on Delivery is not available for this PIN code.</p>
+              <label className={`flex items-center gap-3 p-3 rounded-lg border transition-colors
+                ${!serviceability.cod_available ? 'border-white/5 opacity-40 cursor-not-allowed' :
+                  paymentMethod === 'COD' ? 'border-[#e8ff47] bg-[#e8ff47]/5 cursor-pointer' : 'border-white/10 cursor-pointer'}`}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="COD"
+                  checked={paymentMethod === 'COD'}
+                  disabled={!serviceability.cod_available}
+                  onChange={() => setPaymentMethod('COD')}
+                />
+                <span className="text-sm">
+                  Cash on Delivery
+                  {serviceability.checking && <span className="text-white/40"> · checking availability…</span>}
+                  {!serviceability.checking && serviceability.serviceable === false && (
+                    <span className="text-white/40"> · not deliverable to this pincode</span>
+                  )}
+                  {!serviceability.checking && serviceability.serviceable && !serviceability.cod_available && (
+                    <span className="text-white/40"> · not available for this pincode</span>
+                  )}
+                </span>
+              </label>
+            </div>
+            {serviceability.cod_available && serviceability.courier_name && (
+              <p className="text-white/30 text-xs mt-3">
+                Delivered by {serviceability.courier_name}{serviceability.etd ? ` · Est. ${serviceability.etd}` : ''}
+              </p>
             )}
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                name="paymentMethod"
-                checked={paymentMethod === 'ONLINE'}
-                onChange={() => setPaymentMethod('ONLINE')}
-              />
-              <span>Razorpay (UPI / Card / Net Banking)</span>
-            </label>
           </div>
 
           {error && (
@@ -317,13 +321,15 @@ export default function CheckoutPage() {
 
           <button
             type="submit"
-            disabled={loading || (estimate !== null && !estimate.serviceable)}
+            disabled={loading}
             className="btn-primary w-full py-4 rounded-xl mt-4 font-bold text-sm uppercase tracking-wider disabled:opacity-50"
           >
-            {loading ? 'Processing...' : paymentMethod === 'COD' ? 'Place COD Order' : `Pay ₹${grandTotal.toLocaleString()} via Razorpay`}
+            {loading ? 'Processing...' : paymentMethod === 'COD'
+              ? `Place Order (Pay ₹${grandTotal.toLocaleString()} on Delivery)`
+              : `Pay ₹${grandTotal.toLocaleString()} via Razorpay`}
           </button>
           <p className="text-white/30 text-xs text-center mt-3">
-            🔒 Secured by Razorpay · UPI, Cards, Net Banking accepted
+            {paymentMethod === 'COD' ? '📦 Pay in cash when your order arrives' : '🔒 Secured by Razorpay · UPI, Cards, Net Banking accepted'}
           </p>
         </div>
       </form>
