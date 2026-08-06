@@ -13,19 +13,19 @@ export async function POST(req: NextRequest) {
     const shipping_charge = amount >= 999 ? 0 : 99
     const total = amount + shipping_charge
 
-    // Create Razorpay order
     const razorpayOrder = await razorpay.orders.create({
-      amount: total * 100, // paise
+      amount: total * 100,
       currency: 'INR',
       receipt: `seiszn_${Date.now()}`,
     })
 
-    // Create order in Supabase
     const { data: dbOrder, error } = await supabaseAdmin
       .from('orders')
       .insert({
         razorpay_order_id: razorpayOrder.id,
         status: 'pending',
+        payment_method: 'ONLINE',
+        payment_status: 'PENDING',
         customer_name: customer.name,
         customer_email: customer.email,
         customer_phone: customer.phone,
