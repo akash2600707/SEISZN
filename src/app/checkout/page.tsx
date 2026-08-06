@@ -11,7 +11,7 @@ type Serviceability = {
   serviceable: boolean | null
   cod_available: boolean
   courier_name: string | null
-  etd: string | null
+  estimated_delivery_date: string | null
 }
 
 declare global {
@@ -43,19 +43,18 @@ export default function CheckoutPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<'ONLINE' | 'COD'>('ONLINE')
   const [serviceability, setServiceability] = useState<Serviceability>({
-    checking: false, serviceable: null, cod_available: false, courier_name: null, etd: null
+    checking: false, serviceable: null, cod_available: false, courier_name: null, estimated_delivery_date: null
   })
-
-  const totalWeightKg = items.reduce((sum, i) => sum + ((i.product.weight || 500) * i.quantity), 0) / 1000
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }))
   }
 
-  // Debounced serviceability + COD availability check whenever a full pincode is entered
+  // Debounced serviceability + COD check whenever a full pincode is entered.
+  // Uses the same /api/shipping/estimate endpoint as the product page, so results match.
   useEffect(() => {
     if (!/^[0-9]{6}$/.test(form.pincode)) {
-      setServiceability({ checking: false, serviceable: null, cod_available: false, courier_name: null, etd: null })
+      setServiceability({ checking: false, serviceable: null, cod_available: false, courier_name: null, estimated_delivery_date: null })
       return
     }
 
@@ -64,32 +63,29 @@ export default function CheckoutPage() {
 
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch('/api/shiprocket/serviceability', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pincode: form.pincode, weight: totalWeightKg })
-        })
+        const res = await fetch(`/api/shipping/estimate?pincode=${encodeURIComponent(form.pincode)}`)
         const data = await res.json()
         if (cancelled) return
+        if (!res.ok) throw new Error(data.error || 'Unable to fetch delivery estimate')
         setServiceability({
           checking: false,
           serviceable: !!data.serviceable,
           cod_available: !!data.cod_available,
           courier_name: data.courier_name || null,
-          etd: data.etd || null
+          estimated_delivery_date: data.estimated_delivery_date || null
         })
         if (!data.cod_available) {
           setPaymentMethod(m => (m === 'COD' ? 'ONLINE' : m))
         }
       } catch {
         if (cancelled) return
-        setServiceability({ checking: false, serviceable: true, cod_available: false, courier_name: null, etd: null })
+        setServiceability({ checking: false, serviceable: true, cod_available: false, courier_name: null, estimated_delivery_date: null })
         setPaymentMethod(m => (m === 'COD' ? 'ONLINE' : m))
       }
     }, 500)
 
     return () => { cancelled = true; clearTimeout(timer) }
-  }, [form.pincode, totalWeightKg])
+  }, [form.pincode])
 
   const loadRazorpay = () => new Promise<boolean>((resolve) => {
     if (window.Razorpay) return resolve(true)
@@ -139,7 +135,6 @@ export default function CheckoutPage() {
       const loaded = await loadRazorpay()
       if (!loaded) throw new Error('Payment gateway failed to load')
 
-      // Create Razorpay order
       const res = await fetch('/api/razorpay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -163,7 +158,6 @@ export default function CheckoutPage() {
         prefill: { name: form.name, email: form.email, contact: form.phone },
         theme: { color: '#e8ff47' },
         handler: async (response: any) => {
-          // Verify payment
           const verify = await fetch('/api/razorpay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -206,7 +200,6 @@ export default function CheckoutPage() {
       <h1 className="text-3xl font-black mb-10">Checkout</h1>
 
       <form onSubmit={handleCheckout} className="grid md:grid-cols-2 gap-8">
-        {/* Form */}
         <div className="space-y-4">
           <h2 className="font-bold text-lg mb-2">Delivery Details</h2>
 
@@ -248,7 +241,6 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Order Summary */}
         <div>
           <h2 className="font-bold text-lg mb-4">Order Summary</h2>
           <div className="card p-4 space-y-3">
@@ -308,9 +300,9 @@ export default function CheckoutPage() {
                 </span>
               </label>
             </div>
-            {serviceability.cod_available && serviceability.courier_name && (
+            {serviceability.serviceable && serviceability.courier_name && (
               <p className="text-white/30 text-xs mt-3">
-                Delivered by {serviceability.courier_name}{serviceability.etd ? ` · Est. ${serviceability.etd}` : ''}
+                Delivered by {serviceability.courier_name}{serviceability.estimated_delivery_date ? ` · Est. ${serviceability.estimated_delivery_date}` : ''}
               </p>
             )}
           </div>
