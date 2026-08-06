@@ -5,7 +5,6 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholde
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Server-side client with elevated privileges
 export const supabaseAdmin = createClient(
   supabaseUrl,
   process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder'
@@ -21,16 +20,18 @@ export type Product = {
   images: string[]
   category: string
   stock: number
-  weight: number // in grams, for Shiprocket
+  weight: number
   is_active: boolean
   created_at: string
 }
 
 export type Order = {
   id: string
-  razorpay_order_id: string
+  razorpay_order_id: string | null
   razorpay_payment_id: string | null
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled'
+  payment_method: 'ONLINE' | 'COD'
+  payment_status: 'PENDING' | 'PAID'
   shiprocket_order_id: string | null
   shiprocket_shipment_id: string | null
   tracking_url: string | null
