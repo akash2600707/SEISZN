@@ -60,7 +60,6 @@ export async function POST(req: NextRequest) {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature, db_order_id } = await req.json()
 
-    // Verify signature
     const body = razorpay_order_id + '|' + razorpay_payment_id
     const expected = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET!)
@@ -71,15 +70,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid signature' }, { status: 400 })
     }
 
-    // Update order to paid
     const { data: order } = await supabaseAdmin
       .from('orders')
-      .update({ status: 'paid', razorpay_payment_id })
+      .update({ status: 'paid', razorpay_payment_id, payment_status: 'PAID' })
       .eq('id', db_order_id)
       .select()
       .single()
 
-    // Auto-create Shiprocket order
     try {
       const token = await getShiprocketToken()
       const srOrder = await createShiprocketOrder(order, token)
@@ -95,7 +92,6 @@ export async function POST(req: NextRequest) {
       }
     } catch (srError) {
       console.error('Shiprocket error (non-fatal):', srError)
-      // Don't fail the payment if Shiprocket has issues
     }
 
     return NextResponse.json({ success: true, order_id: db_order_id })
