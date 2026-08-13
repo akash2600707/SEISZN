@@ -1,33 +1,289 @@
-*{box-sizing:border-box}
-:root{--ink:#11100e;--paper:#f3efe7;--muted:#777168;--accent:#b8925d}
-html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink)}
-body{font-family:Inter,Arial,sans-serif;overflow-x:hidden}
-.grain{position:fixed;inset:0;pointer-events:none;opacity:.08;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E")}
-.page{width:min(1240px,100%);margin:auto;padding:28px 5vw}
-.nav{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #c9c2b6;padding-bottom:22px}
-.logo{font:bold 34px/1 Arial,sans-serif;letter-spacing:-.09em}
-.nav-note{font-size:10px;letter-spacing:.25em;color:var(--muted)}
-.hero{min-height:calc(100vh - 120px);display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:5vw;padding:7vh 0 8vh}
-.eyebrow{font-size:11px;letter-spacing:.23em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 24px}
-h1{font:600 clamp(54px,7.5vw,105px)/.84 Arial,sans-serif;letter-spacing:-.075em;margin:0 0 34px}
-h1 em{font-family:Georgia,serif;font-weight:400;letter-spacing:-.07em}
-.intro{max-width:430px;color:#4f4a43;line-height:1.7;font-size:15px;margin:0 0 32px}
-.cta{display:inline-flex;gap:35px;align-items:center;text-decoration:none;color:var(--paper);background:var(--ink);padding:17px 22px;font-size:11px;letter-spacing:.16em;font-weight:700}
-.hero-art{position:relative;min-height:530px;display:grid;place-items:center}
-.orb{position:absolute;width:min(38vw,430px);aspect-ratio:1;border:1px solid #bcb4a7;border-radius:50%;box-shadow:0 0 0 45px #ece7dc,0 0 0 46px #cfc7b9}
-.stamp{position:absolute;z-index:3;top:12%;right:3%;font:bold 16px/1.2 Arial;letter-spacing:.15em;text-align:center;transform:rotate(8deg);border:1px solid var(--ink);border-radius:50%;width:112px;height:112px;display:grid;place-content:center}
-.stamp small{font-size:6px;letter-spacing:.2em;margin-top:7px}
-.building{position:relative;z-index:2;width:min(31vw,380px);max-height:430px;filter:drop-shadow(0 20px 25px #0002)}
-.order{position:absolute;z-index:4;width:155px;left:5%;bottom:8%;transform:rotate(-7deg);filter:drop-shadow(0 12px 12px #0002)}
-.trust{border-top:1px solid #c9c2b6;border-bottom:1px solid #c9c2b6;padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:30px}
-.trust p{font-size:9px;letter-spacing:.25em;color:var(--muted);margin:0}
-.payments{display:flex;align-items:center;gap:25px}
-.payments img{max-width:125px;max-height:42px;object-fit:contain}
-.payments span{height:28px;width:1px;background:#c9c2b6}
-footer{display:flex;justify-content:space-between;padding:24px 0 8px;font-size:9px;letter-spacing:.18em;color:#8c8478}
-@media(max-width:760px){
-.page{padding:22px 24px}.nav-note{display:none}.hero{grid-template-columns:1fr;min-height:auto;padding:12vh 0 10vh;gap:30px}
-h1{font-size:clamp(58px,18vw,92px)}.hero-art{min-height:390px}.orb{width:300px}.building{width:270px}.stamp{top:0;right:0}.order{width:120px;left:0;bottom:0}
-.trust{align-items:flex-start;flex-direction:column}.payments img{max-width:105px}
-footer{gap:12px;flex-wrap:wrap}
+/* ===================================================
+   Seiszn — Coming Soon
+   Palette: Ivory #F6F2EA · Ink #14120F · Gold #B8935A · Clay #A79A85
+=================================================== */
+
+:root {
+  --ivory: #F6F2EA;
+  --ivory-2: #EFE9DD;
+  --ink: #15130F;
+  --ink-soft: #3A362E;
+  --gold: #B8935A;
+  --gold-soft: #D9C39A;
+  --clay: #A79A85;
+
+  --font-display: 'Bricolage Grotesque', 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  --ease: cubic-bezier(.22, 1, .36, 1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ---------- Ambient background ---------- */
+
+.bg-glow {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(70px);
+  pointer-events: none;
+  z-index: 0;
+  opacity: .55;
+}
+.bg-glow--one {
+  width: 46vw;
+  height: 46vw;
+  top: -14vw;
+  left: -12vw;
+  background: radial-gradient(circle, var(--gold-soft), transparent 70%);
+  animation: drift1 26s ease-in-out infinite;
+}
+.bg-glow--two {
+  width: 40vw;
+  height: 40vw;
+  bottom: -16vw;
+  right: -10vw;
+  background: radial-gradient(circle, var(--clay), transparent 70%);
+  opacity: .35;
+  animation: drift2 30s ease-in-out infinite;
+}
+
+@keyframes drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(4vw, 3vw) scale(1.08); }
+}
+@keyframes drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-3vw, -4vw) scale(1.06); }
+}
+
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: .05;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- Stage ---------- */
+
+.stage {
+  position: relative;
+  z-index: 2;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8vh 6vw 6vh;
+  gap: 0;
+}
+
+/* ---------- Mark + orbiting rings ---------- */
+
+.mark-wrap {
+  position: relative;
+  width: clamp(96px, 16vw, 168px);
+  height: clamp(96px, 16vw, 168px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: clamp(18px, 3vw, 30px);
+}
+
+.mark {
+  width: 58%;
+  height: 58%;
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(.55);
+  filter: blur(6px);
+  animation: markIn 1000ms var(--ease) 200ms forwards,
+             float 6.5s ease-in-out 1.4s infinite alternate;
+}
+
+@keyframes markIn {
+  to { opacity: 1; transform: scale(1); filter: blur(0); }
+}
+@keyframes float {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6%); }
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(21, 19, 15, 0.16);
+  opacity: 0;
+  animation: ringIn 900ms var(--ease) 0ms forwards,
+             spin 46s linear 1s infinite;
+  transform-origin: 50% 50%;
+}
+.ring--dashed {
+  inset: -16%;
+  border: 1px dashed rgba(184, 147, 90, 0.55);
+  animation: ringIn 900ms var(--ease) 100ms forwards,
+             spin 70s linear reverse 1s infinite;
+}
+
+@keyframes ringIn {
+  from { opacity: 0; transform: scale(.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Wordmark ---------- */
+
+.wordmark {
+  width: clamp(160px, 26vw, 280px);
+  height: auto;
+  opacity: 0;
+  transform: translateY(14px);
+  animation: wordIn 800ms var(--ease) 480ms forwards;
+  margin-bottom: clamp(20px, 4vw, 34px);
+}
+
+@keyframes wordIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Text reveals ---------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  animation: revealIn 700ms var(--ease) forwards;
+  animation-delay: calc(560ms + (var(--d) * 110ms));
+}
+@keyframes revealIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.eyebrow {
+  margin: 0 0 14px;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.headline {
+  margin: 0 0 16px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(28px, 5.4vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  max-width: 16ch;
+  color: var(--ink);
+}
+
+.subtext {
+  margin: 0 0 34px;
+  font-size: clamp(14.5px, 1.6vw, 17px);
+  line-height: 1.6;
+  color: var(--ink-soft);
+  max-width: 42ch;
+}
+
+/* ---------- CTA ---------- */
+
+.cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 28px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ivory);
+  text-decoration: none;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: .01em;
+  overflow: hidden;
+  isolation: isolate;
+  transition: color 420ms var(--ease), transform 240ms var(--ease), box-shadow 240ms var(--ease);
+  box-shadow: 0 1px 0 rgba(21,19,15,0.04);
+}
+
+.cta__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--gold);
+  transform: translateX(-102%);
+  transition: transform 480ms var(--ease);
+}
+
+.cta__icon { flex-shrink: 0; transition: transform 420ms var(--ease); }
+.cta__arrow { flex-shrink: 0; transform: translateX(0); transition: transform 320ms var(--ease); }
+
+.cta:hover,
+.cta:focus-visible {
+  color: var(--ink);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(21,19,15,0.14);
+}
+.cta:hover .cta__bg,
+.cta:focus-visible .cta__bg { transform: translateX(0); }
+.cta:hover .cta__icon,
+.cta:focus-visible .cta__icon { transform: rotate(-8deg) scale(1.06); }
+.cta:hover .cta__arrow,
+.cta:focus-visible .cta__arrow { transform: translateX(4px); }
+
+.cta:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+/* ---------- Footer ---------- */
+
+.footnote {
+  margin: 40px 0 0;
+  font-size: 12px;
+  letter-spacing: .03em;
+  color: var(--clay);
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .mark, .ring, .ring--dashed, .wordmark, .reveal, .bg-glow {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .cta, .cta__bg, .cta__icon, .cta__arrow { transition: none; }
+}
+
+/* ---------- Small screens ---------- */
+
+@media (max-width: 420px) {
+  .stage { padding: 9vh 7vw 7vh; }
+  .headline { max-width: 18ch; }
 }

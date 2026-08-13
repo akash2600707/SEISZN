@@ -1,53 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Seiszn — Coming Soon</title>
-<meta name="description" content="Seiszn — women's fashion. A new online home is coming soon.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Seiszn — A new season is coming</title>
+<meta name="description" content="Seiszn's new home is being built. Follow and shop on Instagram until it opens.">
+
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-<div class="grain"></div>
-<main class="page">
-  <nav class="nav">
-    <div class="logo <img class="wordmark" src="assets/logo-wordmark.png" alt="Seiszn">
-"> </div>
-    <span class="nav-note">WOMEN'S FASHION</span>
-  </nav>
 
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow">A new season is loading</p>
-      <h1>Something<br><em>new</em> is being<br>stitched.</h1>
-      <p class="intro">Our new online home is taking shape. Seiszn is getting ready to bring you a sharper, simpler way to discover your next favourite look.</p>
-      <a class="cta" href="https://www.instagram.com/Seiszn.in" target="_blank" rel="noopener">
-        <span>SHOP ON INSTAGRAM</span><span>↗</span>
-      </a>
-    </div>
-    <div class="hero-art">
-      <div class="orb"></div>
-      <div class="stamp">SEISZN<br><small>EST. 2024 · INDIA</small></div>
-      <img class="building" src="assets/Building Website.svg" alt="">
-      <img class="order" src="assets/Order now.svg" alt="">
-    </div>
-  </section>
+<div class="grain" aria-hidden="true"></div>
+<div class="bg-glow bg-glow--one" aria-hidden="true"></div>
+<div class="bg-glow bg-glow--two" aria-hidden="true"></div>
 
-  <section class="trust">
-    <p>READY FOR ORDERS</p>
-    <div class="payments">
-      <img src="assets/razorpay-logo-hd.png" alt="Razorpay">
-      <span></span>
-      <img src="assets/shiprocket-logo-hd.png" alt="Shiprocket">
-    </div>
-  </section>
+<main class="stage">
 
-  <footer>
-    <span>© <span id="year"></span> SEISZN</span>
-    <span>MADE FOR INDIA</span>
-    <span>seiszn.in</span>
+  <img class="wordmark" src="assets/logo-wordmark.png" alt="Seiszn">
+
+  <p class="eyebrow reveal" style="--d:1">New site &mdash; in the making</p>
+
+  <h1 class="headline reveal" style="--d:2">Our new home is being stitched&nbsp;together.</h1>
+
+  <p class="subtext reveal" style="--d:3">
+    seiszn.in opens soon. Until then, browse new drops and place your orders with us on Instagram.
+  </p>
+
+  <a class="cta reveal" style="--d:4" href="https://www.instagram.com/Seiszn.in" target="_blank" rel="noopener noreferrer">
+    <span class="cta__bg" aria-hidden="true"></span>
+    <svg class="cta__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="12" cy="12" r="4.6" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor"/>
+    </svg>
+    <span class="cta__label">Shop on Instagram</span>
+    <svg class="cta__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <path d="M3 8H13M13 8L8.5 3.5M13 8L8.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </a>
+
+  <footer class="footnote reveal" style="--d:5">
+    &copy; <span id="year"></span> Seiszn &middot; Women&rsquo;s fashion, made for India
   </footer>
+
 </main>
-<script>document.getElementById('year').textContent=new Date().getFullYear()</script>
+
+<script src="script.js"></script>
 </body>
 </html>
