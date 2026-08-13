@@ -1,9 +1,9 @@
 'use client'
 
-import { useSearchParams } from 'next/navigation'
+import { Suspense, useSearchParams } from 'react'
 import Link from 'next/link'
 
-export default function OrderConfirmation() {
+function OrderConfirmationContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get('order_id')
   const paymentId = searchParams.get('payment_id')
@@ -26,5 +26,13 @@ export default function OrderConfirmation() {
         Continue Shopping
       </Link>
     </div>
+  )
+}
+
+export default function OrderConfirmationPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-10">Loading...</div>}>
+      <OrderConfirmationContent />
+    </Suspense>
   )
 }
