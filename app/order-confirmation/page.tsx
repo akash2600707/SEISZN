@@ -1,12 +1,13 @@
-'use client'
-
-import { Suspense, useSearchParams } from 'react'
+cat > app/order-confirmation/page.tsx << 'EOF'
 import Link from 'next/link'
 
-function OrderConfirmationContent() {
-  const searchParams = useSearchParams()
-  const orderId = searchParams.get('order_id')
-  const paymentId = searchParams.get('payment_id')
+export default function OrderConfirmationPage({
+  searchParams,
+}: {
+  searchParams: { order_id?: string; payment_id?: string }
+}) {
+  const orderId = searchParams?.order_id
+  const paymentId = searchParams?.payment_id
 
   return (
     <div className="text-center py-10">
@@ -28,11 +29,4 @@ function OrderConfirmationContent() {
     </div>
   )
 }
-
-export default function OrderConfirmationPage() {
-  return (
-    <Suspense fallback={<div className="text-center py-10">Loading...</div>}>
-      <OrderConfirmationContent />
-    </Suspense>
-  )
-}
+EOF
