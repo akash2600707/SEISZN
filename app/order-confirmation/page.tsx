@@ -1,4 +1,3 @@
-cat > app/order-confirmation/page.tsx << 'EOF'
 import Link from 'next/link'
 
 export default function OrderConfirmationPage({
@@ -29,4 +28,3 @@ export default function OrderConfirmationPage({
     </div>
   )
 }
-EOF
