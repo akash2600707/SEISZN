@@ -91,7 +91,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 28px 6vw 0;
+  padding: 18px 6vw 0;
 }
 .brand-row__mark { height: 30px; width: auto; }
 .brand-row__word { height: 20px; width: auto; margin-top: 2px; }
@@ -103,7 +103,7 @@ body {
   z-index: 2;
   max-width: 1180px;
   margin: 0 auto;
-  padding: 4vh 6vw 6vh;
+  padding: 1.5vh 6vw 3vh;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -112,10 +112,12 @@ body {
 .hero {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
-  align-items: center;
+  align-items: start;
   gap: clamp(24px, 5vw, 64px);
-  padding: 4vh 0 5vh;
+  padding: 1.5vh 0 2.5vh;
 }
+
+.hero__text { padding-top: clamp(8px, 4vh, 48px); }
 
 .hero__text { text-align: left; }
 
@@ -266,7 +268,7 @@ body {
 .building-anim {
   position: relative;
   width: 100%;
-  max-width: 460px;
+  max-width: 400px;
   height: auto;
   filter: drop-shadow(0 18px 30px rgba(21,19,15,0.08));
   animation: floatArt 7s ease-in-out infinite alternate;
@@ -280,8 +282,8 @@ body {
 /* ---------- Trust bar ---------- */
 
 .trust {
-  margin-top: clamp(20px, 4vw, 36px);
-  padding: clamp(22px, 4vw, 34px) clamp(18px, 4vw, 40px);
+  margin-top: clamp(12px, 2vw, 20px);
+  padding: clamp(16px, 3vw, 24px) clamp(18px, 4vw, 40px);
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
   display: flex;
@@ -332,7 +334,7 @@ body {
 /* ---------- Footer ---------- */
 
 .footnote {
-  margin: 30px 0 0;
+  margin: 18px 0 0;
   text-align: center;
   font-size: 12px;
   letter-spacing: .03em;
