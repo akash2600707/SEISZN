@@ -22,32 +22,69 @@
 <div class="bg-glow bg-glow--one" aria-hidden="true"></div>
 <div class="bg-glow bg-glow--two" aria-hidden="true"></div>
 
+<!-- Slim brand row -->
+<header class="brand-row reveal" style="--d:0">
+  <img class="brand-row__mark" src="assets/logo-mark.png" alt="">
+  <img class="brand-row__word" src="assets/logo-wordmark.png" alt="Seiszn">
+</header>
+
 <main class="stage">
 
-  <img class="wordmark" src="assets/logo-wordmark.png" alt="Seiszn">
+  <section class="hero">
 
-  <p class="eyebrow reveal" style="--d:1">New site &mdash; in the making</p>
+    <div class="hero__text">
+      <p class="eyebrow reveal" style="--d:1">New site &mdash; in the making</p>
 
-  <h1 class="headline reveal" style="--d:2">Our new home is being stitched&nbsp;together.</h1>
+      <h1 class="headline reveal" style="--d:2">Our new home is being stitched&nbsp;together.</h1>
 
-  <p class="subtext reveal" style="--d:3">
-    seiszn.in opens soon. Until then, browse new drops and place your orders with us on Instagram.
-  </p>
+      <p class="subtext reveal" style="--d:3">
+        seiszn.in opens soon. Until then, browse new drops and place your orders
+        with us directly on Instagram.
+      </p>
 
-  <a class="cta reveal" style="--d:4" href="https://www.instagram.com/Seiszn.in" target="_blank" rel="noopener noreferrer">
-    <span class="cta__bg" aria-hidden="true"></span>
-    <svg class="cta__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" stroke-width="1.6"/>
-      <circle cx="12" cy="12" r="4.6" stroke="currentColor" stroke-width="1.6"/>
-      <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor"/>
-    </svg>
-    <span class="cta__label">Shop on Instagram</span>
-    <svg class="cta__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 8H13M13 8L8.5 3.5M13 8L8.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-  </a>
+      <div class="cta-row reveal" style="--d:4">
+        <div class="cta-row__art" aria-hidden="true">
+          <img src="assets/illustration-order.svg" alt="" class="order-anim">
+        </div>
+        <a class="cta" href="https://www.instagram.com/Seiszn.in" target="_blank" rel="noopener noreferrer">
+          <span class="cta__bg" aria-hidden="true"></span>
+          <svg class="cta__icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="2.5" y="2.5" width="19" height="19" rx="6" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="12" cy="12" r="4.6" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor"/>
+          </svg>
+          <span class="cta__label">Shop &amp; order on Instagram</span>
+          <svg class="cta__arrow" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8H13M13 8L8.5 3.5M13 8L8.5 12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+      </div>
+    </div>
 
-  <footer class="footnote reveal" style="--d:5">
+    <div class="hero__art reveal" style="--d:2">
+      <div class="hero__art-blob" aria-hidden="true"></div>
+      <img src="assets/illustration-building.svg" alt="Illustration of Seiszn's new website being built" class="building-anim">
+    </div>
+
+  </section>
+
+  <!-- Trust bar: payments + shipping partners -->
+  <section class="trust reveal" style="--d:5" aria-label="Order confidently">
+    <p class="trust__lead">Even while we build, you can order with confidence</p>
+    <div class="trust__row">
+      <div class="trust__item">
+        <img src="assets/trust-razorpay.png" alt="Razorpay">
+        <span>Secure payments</span>
+      </div>
+      <div class="trust__divider" aria-hidden="true"></div>
+      <div class="trust__item">
+        <img src="assets/trust-shiprocket.png" alt="Shiprocket">
+        <span>Reliable, tracked shipping</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footnote reveal" style="--d:6">
     &copy; <span id="year"></span> Seiszn &middot; Women&rsquo;s fashion, made for India
   </footer>
 
